@@ -11,6 +11,12 @@ public class HighOrLowerGame extends Game {
     private int player1Streak = 0;
     private int player2Streak = 0;
 
+    private int player1LossStreak = 0;
+    private int player2LossStreak = 0;
+
+    private boolean player1SkipUsed = false;
+    private boolean player2SkipUsed = false;
+
     public HighOrLowerGame(String name, Player player1, Player player2) {
         super(name);
         this.player1 = player1;
@@ -23,85 +29,109 @@ public class HighOrLowerGame extends Game {
         currentPlayer = (currentPlayer == player1) ? player2 : player1;
     }
 
-@Override
-public void play() {
-    deck.shuffle();
-    Scanner scanner = new Scanner(System.in);
-    int rounds = 4;
-    Card currentCard = deck.drawCard();
-    int round = 1;
+    @Override
+    public void play() {
+        deck.shuffle();
+        Scanner scanner = new Scanner(System.in);
+        int rounds = 10;
+        Card currentCard = deck.drawCard();
+        int round = 1;
 
-    System.out.println("Welcome to " + getName() + "!");
-    System.out.println("Player 1: " + player1.getName());
-    System.out.println("Player 2: " + player2.getName());
+        System.out.println("Welcome to " + getName() + "!");
+        System.out.println("Player 1: " + player1.getName());
+        System.out.println("Player 2: " + player2.getName());
 
-    while (round <= rounds) {
-        if (currentCard == null) {
-            System.out.println("Deck is empty. Reshuffling...");
-            deck.resetDeck();
-            currentCard = deck.drawCard();
-        }
-
-        Card nextCard = deck.drawCard();
-
-        System.out.println("\nRound " + round + ":");
-        System.out.println("Current card: " + currentCard);
-
-        // Player 1 guess
-        boolean guessPlayer1Correct = makePlayerGuess(player1, currentCard, nextCard, scanner, player1Streak >= 2);
-        if (guessPlayer1Correct) {
-            player1Streak++;
-            if (player1Streak == 3) {
-                // Win on third consecutive guess → double points
-                int doubledPoints = player1.getScore();
-                player1.increaseScore(doubledPoints);
-                System.out.println(player1.getName() + " earned DOUBLE POINTS for a 3-win streak!");
-            } else {
-                player1.increaseScore(1);
+        while (round <= rounds) {
+            if (currentCard == null) {
+                System.out.println("Deck is empty. Reshuffling...");
+                deck.resetDeck();
+                currentCard = deck.drawCard();
             }
-        } else {
-            player1Streak = 0;
-        }
 
-        // Player 2 guess
-        boolean guessPlayer2Correct = makePlayerGuess(player2, currentCard, nextCard, scanner, player2Streak >= 2);
-        if (guessPlayer2Correct) {
-            player2Streak++;
-            if (player2Streak == 3) {
-                int doubledPoints = player2.getScore();
-                player2.increaseScore(doubledPoints);
-                System.out.println(player2.getName() + " earned DOUBLE POINTS for a 3-win streak!");
-            } else {
-                player2.increaseScore(1);
+            Card nextCard = deck.drawCard();
+
+            System.out.println("\nRound " + round + ":");
+            System.out.println("Current card: " + currentCard);
+
+            boolean skipPlayer1 = false;
+            boolean skipPlayer2 = false;
+
+            if (player1LossStreak >= 3 && !player1SkipUsed) {
+                System.out.println(player1.getName() + " activates SKIP! " + player2.getName() + " will miss this round.");
+                player1SkipUsed = true;
+                skipPlayer2 = true;
             }
-        } else {
-            player2Streak = 0;
+
+            if (player2LossStreak >= 3 && !player2SkipUsed) {
+                System.out.println(player2.getName() + " activates SKIP! " + player1.getName() + " will miss this round.");
+                player2SkipUsed = true;
+                skipPlayer1 = true;
+            }
+
+            boolean guessPlayer1Correct = false;
+            boolean guessPlayer2Correct = false;
+
+            // Player 1 turn
+            if (!skipPlayer1) {
+                guessPlayer1Correct = makePlayerGuess(player1, currentCard, nextCard, scanner, player1Streak >= 2);
+                if (guessPlayer1Correct) {
+                    player1Streak++;
+                    player1LossStreak = 0;
+                    if (player1Streak == 3) {
+                        int doubledPoints = player1.getScore();
+                        player1.increaseScore(doubledPoints);
+                        System.out.println(player1.getName() + " earned DOUBLE POINTS for a 3-win streak!");
+                    } else {
+                        player1.increaseScore(1);
+                    }
+                } else {
+                    player1Streak = 0;
+                    player1LossStreak++;
+                }
+            } else {
+                System.out.println(player1.getName() + "'s turn is skipped.");
+            }
+
+            // Player 2 turn
+            if (!skipPlayer2) {
+                guessPlayer2Correct = makePlayerGuess(player2, currentCard, nextCard, scanner, player2Streak >= 2);
+                if (guessPlayer2Correct) {
+                    player2Streak++;
+                    player2LossStreak = 0;
+                    if (player2Streak == 3) {
+                        int doubledPoints = player2.getScore();
+                        player2.increaseScore(doubledPoints);
+                        System.out.println(player2.getName() + " earned DOUBLE POINTS for a 3-win streak!");
+                    } else {
+                        player2.increaseScore(1);
+                    }
+                } else {
+                    player2Streak = 0;
+                    player2LossStreak++;
+                }
+            } else {
+                System.out.println(player2.getName() + "'s turn is skipped.");
+            }
+
+            System.out.println("Next card: " + nextCard);
+            System.out.println(player1.getName() + " guessed: " + (guessPlayer1Correct ? "Correct" : "Incorrect"));
+            System.out.println(player2.getName() + " guessed: " + (guessPlayer2Correct ? "Correct" : "Incorrect"));
+
+            System.out.println("Scores after Round " + round + ":");
+            System.out.println(player1.getName() + " score: " + player1.getScore());
+            System.out.println(player2.getName() + " score: " + player2.getScore());
+
+            currentCard = nextCard;
+            round++;
+            switchPlayer();
         }
 
-        System.out.println("Next card: " + nextCard);
-        System.out.println(player1.getName() + " guessed: " + (guessPlayer1Correct ? "Correct" : "Incorrect"));
-        System.out.println(player2.getName() + " guessed: " + (guessPlayer2Correct ? "Correct" : "Incorrect"));
-
-        System.out.println("Scores after Round " + round + ":");
-        System.out.println(player1.getName() + " score: " + player1.getScore());
-        System.out.println(player2.getName() + " score: " + player2.getScore());
-
-        currentCard = nextCard;
-        round++;
-        switchPlayer();
+        
     }
-
-    System.out.println("\nGame Over! Final Scores:");
-    System.out.println(player1.getName() + " score: " + player1.getScore() + " | " + player2.getName() + " score: " + player2.getScore());
-    scanner.close();
-}
-
-
 
     private boolean makePlayerGuess(Player player, Card currentCard, Card nextCard, Scanner scanner, boolean showProbability) {
         int currentVal = ((StandardCard) currentCard).getValue();
 
-        // Probability Meter shown only if streak >= 2
         if (showProbability) {
             int higherCount = 0;
             int lowerCount = 0;
@@ -131,8 +161,20 @@ public void play() {
     }
 
     @Override
-    public void declareWinner() {
-        System.out.println("Game over! Final scores:");
-        System.out.println(player1.getName() + " score: " + player1.getScore() + " | " + player2.getName() + " score: " + player2.getScore());
+public void declareWinner() {
+    int score1 = player1.getScore();
+    int score2 = player2.getScore();
+
+    System.out.println("\nGame Over! Final scores:");
+    System.out.println(player1.getName() + " score: " + score1 + " | " + player2.getName() + " score: " + score2);
+
+    if (score1 > score2) {
+        System.out.println( player1.getName() + " is the WINNER! Well played!");
+    } else if (score2 > score1) {
+        System.out.println(player2.getName() + " takes the victory! Amazing game!");
+    } else {
+        System.out.println("It's a TIE! What a close match! Well played both!");
     }
+}
+
 }
